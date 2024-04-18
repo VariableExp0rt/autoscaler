@@ -300,6 +300,23 @@ func (ng *AwsNodeGroup) DecreaseTargetSize(delta int) error {
 	if err != nil {
 		return err
 	}
+
+	realNodes := make([]AwsInstanceRef, len(nodes))
+	for _, node := range nodes {
+		status, err := ng.awsManager.GetInstanceStatus(node)
+		if err != nil {
+			return fmt.Errorf("error retrieving instance status for node %s from cache", node.Name)
+		}
+
+		if *status != "" && *status == placeholderUnfulfillableStatus {
+			continue
+		}
+
+		realNodes = append(realNodes, node)
+	}
+
+	nodes = realNodes
+
 	if int(size)+delta < len(nodes) {
 		return fmt.Errorf("attempt to delete existing nodes targetSize:%d delta:%d existingNodes: %d",
 			size, delta, len(nodes))
